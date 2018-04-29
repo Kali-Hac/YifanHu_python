@@ -33,7 +33,7 @@ class Quadtree:
 				# change
 				self.children = [self]
 		else:
-			# 将一个区域分割为四个子区域a
+			# 将一个区域分割为四个子区域
 			children_size = self.size / 2.0
 			if visualization:
 				visualize_divide([self.min_x, self.min_x + self.size], [self.min_y + children_size, self.min_y + children_size])
@@ -107,7 +107,7 @@ class Quadtree:
 			# 该区域容纳进这个节点,并改变总质量和重心位置
 			self.assimilateNode(node)
 			if visualization:
-				plt.scatter(node[0], node[1], marker='o', color='b', s=1)
+				plt.scatter(node[0], node[1], marker='o', color='b', s=5)
 			node_num += 1
 			# 6.成功插入的提示，包括3递归过程中先插入原来已有的节点来更新该区域的重心
 			if description:
@@ -235,13 +235,14 @@ def test_electrical_forces(descri=False, visual=False):
 	if visual:
 		plt.pause(10)
 
+
 # 测试插入节点的函数
 def test_insert_node(node_num=1000, max_dep=20, visual=False, descri=False):
 	global description, visualization
 	visualization = visual
 	description = descri
-	test = Quadtree(min_x=0, min_y=0, size=node_num, max_dep=max_dep)
-	arr = np.random.randint(0, node_num, (node_num, 2))
+	test = Quadtree(min_x=0, min_y=0, size=node_num * 10, max_dep=max_dep)
+	arr = np.random.randint(0, node_num * 10, (node_num, 2))
 	now = datetime.datetime.now()
 	for i in range(arr.shape[0]):
 		test.insert_node([arr[i, 0], arr[i, 1]])
@@ -252,11 +253,127 @@ def test_insert_node(node_num=1000, max_dep=20, visual=False, descri=False):
 	print("### using time：%s" % str(end - now))
 	if visual:
 		plt.pause(10)
+	t = []
+	# test.get_all_mass_center(t)
+	# plt.pause(10)
 
+# 直接调用cal_electrical_forces计算所有点斥力和调用get_farthest_mass后迭代计算的效率对比
+def test_cal_effectiveness(node_num=10000):
+	import time
+	test = Quadtree(min_x=0, min_y=0, size=1, max_dep=100)
+	node_list = np.random.random((node_num * 2, 2))
+	for i in range(node_list.shape[0]):
+		test.insert_node(node_list[i, :].tolist())
+
+	# now = datetime.datetime.now()
+	now = time.time()
+	for i in range(node_list.shape[0]):
+		node = node_list[i, :].tolist()
+		force_vector = [0.0, 0.0]
+		test.cal_electrical_forces(node=node, threshold=1.2, c=1, k=1, e_force_vector=force_vector)
+	# end = datetime.datetime.now()
+	end = time.time()
+	print("First_Method: %s" % str(end - now))
+	f = end - now
+
+	# now = datetime.datetime.now()
+	now = time.time()
+	for i in range(node_list.shape[0]):
+		node = node_list[i, :].tolist()
+		t = []
+		test.get_farthest_mass(node=node, threshold=1.2, pos_arr=t)
+		x_force_sum = y_force_sum = 0.0
+		for j in t:
+			distance_sqr = (node[0] - j[1][0]) ** 2 + (node[1] - j[1][1]) ** 2
+			if distance_sqr == 0:
+				continue
+			x_force_sum += (node[0] - j[1][0]) * 1 / distance_sqr * j[0]
+			y_force_sum += (node[1] - j[1][1]) * 1 / distance_sqr * j[0]
+	# end = datetime.datetime.now()
+	end = time.time()
+	s = end - now
+	print("Second_Method: %s" % str(end - now))
+	return f,s
+# 从0到2000节点的一个对比，增加幅度为100
+def draw_cal_effectiveness_comparison():
+	f_use = []
+	s_use = []
+	plt.figure()
+	for i in range(0, 2000, 100):
+		f, s = test_cal_effectiveness(node_num=i)
+		f_use.append(f)
+		s_use.append(s)
+	plt.plot(range(0, 2000, 100), f_use, color='green', label='cal_electrical_forces')
+	# plt.legend('Barnes_Hut', loc='best')
+	plt.plot(range(0, 2000, 100), s_use, color='blue', label='get_farthest_mass + iteration')
+	plt.legend(loc='best')
+	plt.xlabel("Number of node")
+	plt.ylabel("Time of calculation (sec)")
+	plt.show()
+
+# 直接用迭代计算所有点的斥力和使用Barnes_Hut算法计算斥力的效率对比
+def test_ori_cal_effectiveness(node_num=10000):
+	import time
+	test = Quadtree(min_x=0, min_y=0, size=1, max_dep=100)
+	node_list = np.random.random((node_num, 2))
+	for i in range(node_list.shape[0]):
+		test.insert_node(node_list[i, :].tolist())
+
+	# now = datetime.datetime.now()
+	now = time.time()
+	for i in range(node_list.shape[0]):
+		node = node_list[i, :].tolist()
+		force_vector = [0.0, 0.0]
+		test.cal_electrical_forces(node=node, threshold=1.2, c=1, k=1, e_force_vector=force_vector)
+	# end = datetime.datetime.now()
+	end = time.time()
+	f = end - now
+	print("First_Method: %s" % str(end - now))
+
+
+	# now = datetime.datetime.now()
+	now = time.time()
+	for i in range(node_list.shape[0]):
+		node = node_list[i, :].tolist()
+		t = []
+		test.get_farthest_mass(node=node, threshold=1.2, pos_arr=t)
+		x_force_sum = y_force_sum = 0.0
+		for s in range(node_list.shape[0]):
+			j = node_list[s, :].tolist()
+			distance_sqr = (node[0] - j[0]) ** 2 + (node[1] - j[1]) ** 2
+			if distance_sqr == 0:
+				continue
+			x_force_sum += (node[0] - j[0]) * 1 / distance_sqr
+			y_force_sum += (node[1] - j[1]) * 1 / distance_sqr
+	# end = datetime.datetime.now()
+	end = time.time()
+	print("Second_Method: %s" % str(end - now))
+	s = end - now
+	return f, s
+# 从0到1500节点的一个对比，增加幅度为25
+def draw_ori_cal_effectiveness_comparison():
+	f_use = []
+	s_use = []
+	plt.figure()
+	for i in range(0, 1500, 25):
+		f, s = test_ori_cal_effectiveness(node_num=i)
+		f_use.append(f)
+		s_use.append(s)
+	plt.plot(range(0, 1500, 25), f_use, color='green', label='Barnes_Hut')
+	# plt.legend('Barnes_Hut', loc='best')
+	plt.plot(range(0, 1500, 25), s_use, color='blue', label='Ordinary')
+	plt.legend(loc='best')
+	plt.xlabel("Number of node")
+	plt.ylabel("Time of calculation (sec)")
+	plt.show()
 
 if __name__ == "__main__":
 	# 开启可视化会大幅增加运行时间
 	test_insert_node(node_num=10000, max_dep=20, visual=False, descri=False)
-	test_electrical_forces(visual=True, descri=False)
+	# test_electrical_forces(visual=False, descri=False)
+	# test_cal_effectiveness(node_num=100000)
+	# draw_cal_effectiveness_comparison()
+	# test_ori_cal_effectiveness()
+	# draw_ori_cal_effectiveness_comparison()
 
 
