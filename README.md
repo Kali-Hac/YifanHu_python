@@ -7,7 +7,7 @@ It is based on the article of [Efficient, High-Quality
 Force-Directed Graph
 Drawing](http://www.mathematica-journal.com/issue/v10i1/contents/graph_draw/graph_draw.pdf)
 
-### The visualization and description are available in this project.You can also take a look at **[my blog]**(https://yikunhaocong.com/)
+### The visualization and description are available in this project.You can also take a look at [my blog](https://yikunhaocong.com/)
 
 ## USAGE
 ```
@@ -54,9 +54,9 @@ while not lo.Converged:
 ![](http://op72m4y17.bkt.clouddn.com/node_100.png)
 ![](http://op72m4y17.bkt.clouddn.com/node_100_mass.png)
 
-- Effectiveness of Model
+### Effectiveness of Model
 ![](http://op72m4y17.bkt.clouddn.com/eff_1.png)
 
-- Need to optimize
+### Need to optimize
 See in my blog: [https://yikunhaocong.com/2018/04/29/barnes-hut/](https://yikunhaocong.com/2018/04/29/barnes-hut/)
 ![](http://op72m4y17.bkt.clouddn.com/eff_2.png)
